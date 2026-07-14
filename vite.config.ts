@@ -6,7 +6,17 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   const isGithubActions = process.env.GITHUB_ACTIONS === 'true';
   const repoName = process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : '';
-  const base = isGithubActions && repoName ? `/${repoName}/` : '/';
+  
+  // GitHub Actions 배포 시 사용자/조직 페이지(*.github.io)면 루트('/'), 일반 프로젝트면 서브디렉토리('/repo-name/')
+  // 그 외 개발/미리보기 환경에서는 상대경로('./')를 사용하여 리소스를 안전하게 로드합니다.
+  let base = './';
+  if (isGithubActions && repoName) {
+    if (repoName.toLowerCase().endsWith('.github.io')) {
+      base = '/';
+    } else {
+      base = `/${repoName}/`;
+    }
+  }
 
   return {
     base,
