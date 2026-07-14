@@ -66,6 +66,9 @@ export const AiAdvisorPanel: React.FC<AiAdvisorPanelProps> = ({
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("GitHub Pages 등 정적 호스팅 환경에서는 백엔드 Node.js 서버(server.ts)가 동작하지 않으므로 실시간 Gemini AI 기능을 실행할 수 없습니다. AI 자문기능을 사용하려면 미리보기용 Cloud Run 링크를 사용하시거나, 로컬 환경에서 실행해 주세요.");
+        }
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `서버 응답 오류 (HTTP ${response.status})`);
       }

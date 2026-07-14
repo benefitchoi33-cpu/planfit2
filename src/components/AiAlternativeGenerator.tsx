@@ -54,6 +54,9 @@ export const AiAlternativeGenerator: React.FC<AiAlternativeGeneratorProps> = ({
       });
 
       if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error("GitHub Pages 등 정적 호스팅 환경에서는 백엔드 Node.js 서버(server.ts)가 동작하지 않으므로 실시간 Gemini AI 기능을 실행할 수 없습니다. AI 대안을 도출하려면 미리보기용 Cloud Run 링크를 사용하시거나, 로컬 환경에서 실행해 주세요.");
+        }
         throw new Error(`AI 서버 오류 (HTTP ${response.status})`);
       }
 
