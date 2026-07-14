@@ -41,24 +41,23 @@ export const AlternativeDetailsCard: React.FC<AlternativeDetailsCardProps> = ({
   const rawUndergroundUtilityArea = alternative.undergroundFloorArea - undergroundParkingArea;
   const undergroundUtilityArea = rawUndergroundUtilityArea > 0 ? Math.round(rawUndergroundUtilityArea * 100) / 100 : Math.round((totalUnits * 4.5) * 100) / 100;
 
-  // 6. 계획 동수 및 최고 층수 기반 기획 배치 타당성 연동 분석 (포디움, 피난층, 트랜스퍼 반영)
+  // 6. 계획 동수 및 최고 층수 기반 기획 배치 타당성 연동 분석 (포디움, 피난층 반영)
   const bldgCount = alternative.buildingCount || 0;
   const maxFloors = alternative.maxFloors || 0;
   const bldgArea = alternative.buildingArea || 0;
 
   const podiumFloors = alternative.podiumFloors || 0;
   const refugeFloors = alternative.refugeFloors || 0;
-  const transferFloors = alternative.transferFloors || 0;
 
   // 실제 주거 용도로 사용 가능한 적층 층수
-  const residentialFloors = Math.max(0, maxFloors - podiumFloors - refugeFloors - transferFloors);
+  const residentialFloors = Math.max(0, maxFloors - podiumFloors - refugeFloors);
 
   // 대지면적 기반 실무 자동 연산 변수들
   const netLotArea = metrics.netLotArea || Math.max(0.1, project.lotArea - project.roadArea);
   const maxBuildingArea = Math.round(netLotArea * ((alternative.targetBuildingCoverageRatio || 60) / 100) * 10) / 10;
   
-  // 지하경계 1m 이격 최대 1개층 바닥면적 (정사각형 대지 가정 시 한계 굴착 범위)
-  const maxUndergroundFloorPlate = Math.max(0, Math.sqrt(netLotArea) - 2) ** 2;
+  // 지하경계 이격 고려 최대 1개층 바닥면적 (대지의 약 80% 적용)
+  const maxUndergroundFloorPlate = netLotArea * 0.8; // 실무 관례상 대지 면적의 약 80% 수준으로 지하 굴착 평균 한 층 면적 설정
   const roundedMaxUndergroundFloorPlate = Math.round(maxUndergroundFloorPlate * 10) / 10;
 
   const applyMaxBcrArea = () => {
@@ -190,7 +189,7 @@ export const AlternativeDetailsCard: React.FC<AlternativeDetailsCardProps> = ({
               <span>🏢 수직 높이 상세 보정 계획</span>
               <span className="text-[8px] bg-indigo-50 text-indigo-700 px-1 py-0.2 rounded font-semibold border border-indigo-150 scale-95">적층 분석 연동</span>
             </span>
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               <div>
                 <label className="block text-[8.5px] font-medium text-slate-500 mb-0.5" title="저층부 포디엄(상가 등) 제외 층수">지상 포디엄</label>
                 <div className="relative">
@@ -202,22 +201,6 @@ export const AlternativeDetailsCard: React.FC<AlternativeDetailsCardProps> = ({
                     className="w-full pr-4 pl-1 py-0.5 border border-slate-200 rounded text-[10.5px] font-mono text-right bg-white"
                     placeholder="0"
                     id="input-podium-floors"
-                  />
-                  <span className="absolute right-1 top-1 text-[8px] text-slate-400">F</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[8.5px] font-medium text-slate-500 mb-0.5" title="구조전환층(트랜스퍼 거더 층) 제외 층수">트랜스퍼</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    name="transferFloors"
-                    value={alternative.transferFloors !== undefined ? alternative.transferFloors : 0}
-                    onChange={handleInputChange}
-                    className="w-full pr-4 pl-1 py-0.5 border border-slate-200 rounded text-[10.5px] font-mono text-right bg-white"
-                    placeholder="0"
-                    id="input-transfer-floors"
                   />
                   <span className="absolute right-1 top-1 text-[8px] text-slate-400">F</span>
                 </div>
@@ -243,7 +226,7 @@ export const AlternativeDetailsCard: React.FC<AlternativeDetailsCardProps> = ({
             <div className="flex justify-between items-center bg-white rounded p-1 px-1.5 text-[9.5px] border border-slate-150">
               <span className="text-slate-500 font-medium font-sans">실 사용 주거 적층 가능층수:</span>
               <span className="font-mono text-slate-800 font-bold">
-                {maxFloors}F - {podiumFloors + transferFloors + refugeFloors}F = <span className="text-indigo-600 font-extrabold text-[10px]">{residentialFloors} 층</span>
+                {maxFloors}F - {podiumFloors + refugeFloors}F = <span className="text-indigo-600 font-extrabold text-[10px]">{residentialFloors} 층</span>
               </span>
             </div>
           </div>
@@ -313,9 +296,6 @@ export const AlternativeDetailsCard: React.FC<AlternativeDetailsCardProps> = ({
                   title="계획 주차면수에 규격 면적(38㎡/대) 및 기본 설비를 가산해 자동 연산됩니다."
                 />
                 <span className="absolute right-1.5 top-1.5 text-[10px] text-slate-400">㎡</span>
-              </div>
-              <div className="mt-1 text-[8.5px] text-slate-500 leading-tight">
-                ⚠️ <span className="font-semibold text-slate-650">지하 1m 이격 한계:</span> {roundedMaxUndergroundFloorPlate.toLocaleString()} ㎡/층
               </div>
             </div>
 

@@ -35,7 +35,9 @@ export const TypeDistributionConfig: React.FC<TypeDistributionConfigProps> = ({
     const updated = types.map((item) => {
       if (item.id === id) {
         let finalVal = value;
-        if (field === "exclArea" || field === "commArea" || field === "count" || field === "unitsPerFloor") {
+        if (field === "unitsPerFloor") {
+          finalVal = Math.max(0, Math.round(parseFloat(value) || 0));
+        } else if (field === "exclArea" || field === "commArea" || field === "count") {
           finalVal = Math.max(0, parseFloat(value) || 0);
         }
         
@@ -44,12 +46,13 @@ export const TypeDistributionConfig: React.FC<TypeDistributionConfigProps> = ({
         // 연동 기획 모드일 때 층당 호수 수정 시 세대수 즉각 계산
         if (mode === "layout") {
           const upf = field === "unitsPerFloor" ? finalVal : (item.unitsPerFloor ?? (item.count / (multiplier || 1)));
-          updatedItem.unitsPerFloor = upf;
-          updatedItem.count = multiplier > 0 ? Math.round(upf * multiplier) : 0;
+          const upfInteger = Math.max(1, Math.round(upf));
+          updatedItem.unitsPerFloor = upfInteger;
+          updatedItem.count = multiplier > 0 ? Math.round(upfInteger * multiplier) : 0;
         } else {
           // 수동 직접입력 모드일 때 세대수 수정 시 층당 호수 역산 기록
           if (field === "count") {
-            updatedItem.unitsPerFloor = multiplier > 0 ? Math.round((finalVal / multiplier) * 100) / 100 : 0;
+            updatedItem.unitsPerFloor = multiplier > 0 ? Math.max(1, Math.round(finalVal / multiplier)) : 0;
           }
         }
         
@@ -95,7 +98,7 @@ export const TypeDistributionConfig: React.FC<TypeDistributionConfigProps> = ({
   const applyPreset = (presetType: "59" | "84" | "114") => {
     const presets = {
       "59": { excl: 59.9, comm: 18.5, name: "59A", upf: 2 },
-      "84": { excl: 84.9, comm: 24.8, name: "84A", upf: 1.5 },
+      "84": { excl: 84.9, comm: 24.8, name: "84A", upf: 2 },
       "114": { excl: 114.8, comm: 32.2, name: "114A", upf: 1 },
     };
     
@@ -210,7 +213,7 @@ export const TypeDistributionConfig: React.FC<TypeDistributionConfigProps> = ({
               const totalSupplyRow = supplyAreaPerUnit * type.count;
               
               // 현재 라인 세대 비율 역산 표시
-              const currentUpf = type.unitsPerFloor !== undefined ? type.unitsPerFloor : (multiplier > 0 ? Math.round((type.count / multiplier) * 100) / 100 : 0);
+              const currentUpf = type.unitsPerFloor !== undefined ? Math.round(type.unitsPerFloor) : (multiplier > 0 ? Math.max(1, Math.round(type.count / multiplier)) : 0);
 
               return (
                 <tr key={type.id} className="hover:bg-slate-50/50 transition-colors">
@@ -263,17 +266,17 @@ export const TypeDistributionConfig: React.FC<TypeDistributionConfigProps> = ({
                       <div className="relative flex items-center justify-end">
                         <input
                           type="number"
-                          step="0.1"
-                          value={currentUpf}
+                          step="1"
+                          value={Math.round(currentUpf)}
                           onChange={(e) => handleRowChange(type.id, "unitsPerFloor", e.target.value)}
                           className="w-full pr-4 py-0.5 text-right border border-transparent hover:border-indigo-200 focus:border-indigo-600 bg-transparent focus:bg-white rounded text-xs font-bold text-indigo-950"
-                          title="한 개층 평면에서의 해당 평형 호배조 라인 개수를 입력해 줍니다. (예: 2호 조합, 1.5호 등)"
+                          title="한 개층 평면에서의 해당 평형 호배조 라인 개수를 입력해 줍니다. (예: 2호 조합, 3호 조합 등, 무조건 정수)"
                         />
                         <span className="absolute right-0 text-[10px] text-indigo-600 font-bold">호</span>
                       </div>
                     ) : (
                       <div className="text-right pr-2 text-slate-400 text-[11px] font-medium" title="수동 지정 모드에서는 역산치만 모니터링됩니다.">
-                        {currentUpf.toFixed(2)} 호
+                        {Math.round(currentUpf)} 호
                       </div>
                     )}
                   </td>
@@ -332,7 +335,7 @@ export const TypeDistributionConfig: React.FC<TypeDistributionConfigProps> = ({
               
               {/* 호합계 */}
               <td className="py-2 px-3 text-right text-indigo-200 text-xs border-l border-slate-700 font-bold bg-transparent">
-                층당: {types.reduce((sum, t) => sum + (t.unitsPerFloor !== undefined ? t.unitsPerFloor : (multiplier > 0 ? t.count / multiplier : 0)), 0).toFixed(2)} 호
+                층당: {Math.round(types.reduce((sum, t) => sum + (t.unitsPerFloor !== undefined ? t.unitsPerFloor : (multiplier > 0 ? t.count / multiplier : 0)), 0))} 호
               </td>
 
               <td className="py-2 px-3 text-right text-yellow-400 text-xs border-l border-slate-700 bg-slate-900/20 font-extrabold">

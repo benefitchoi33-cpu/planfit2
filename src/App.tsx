@@ -14,7 +14,6 @@ import { UsageAreaTable } from "./components/UsageAreaTable";
 import { ComparisonMatrix } from "./components/ComparisonMatrix";
 import { AiAdvisorPanel } from "./components/AiAdvisorPanel";
 import { AiAlternativeGenerator } from "./components/AiAlternativeGenerator";
-import { UnitPortfolioOptimizer } from "./components/UnitPortfolioOptimizer";
 import { calculateAlternativeMetrics, convertProjectToCsvRows, convertAlternativeToGansamRows } from "./utils/calculations";
 
 import {
@@ -58,11 +57,10 @@ const INITIAL_ALTERNATIVES: Alternative[] = [
     plannedParkingCount: 320,
     podiumFloors: 1,
     refugeFloors: 0,
-    transferFloors: 1,
     unitSelectionMode: "layout",
     types: [
-      { id: "t1-1", name: "59A", exclArea: 59.9, commArea: 18.2, count: 180, unitsPerFloor: 2.5 },
-      { id: "t1-2", name: "84A", exclArea: 84.9, commArea: 24.5, count: 120, unitsPerFloor: 1.67 },
+      { id: "t1-1", name: "59A", exclArea: 59.9, commArea: 18.2, count: 152, unitsPerFloor: 2 },
+      { id: "t1-2", name: "84A", exclArea: 84.9, commArea: 24.5, count: 76, unitsPerFloor: 1 },
     ],
   },
   {
@@ -79,11 +77,10 @@ const INITIAL_ALTERNATIVES: Alternative[] = [
     plannedParkingCount: 350,
     podiumFloors: 1,
     refugeFloors: 0,
-    transferFloors: 1,
     unitSelectionMode: "layout",
     types: [
-      { id: "t2-1", name: "84A", exclArea: 84.9, commArea: 24.5, count: 160, unitsPerFloor: 2.32 },
-      { id: "t2-2", name: "114A", exclArea: 114.8, commArea: 32.2, count: 80, unitsPerFloor: 1.16 },
+      { id: "t2-1", name: "84A", exclArea: 84.9, commArea: 24.5, count: 144, unitsPerFloor: 2 },
+      { id: "t2-2", name: "114A", exclArea: 114.8, commArea: 32.2, count: 72, unitsPerFloor: 1 },
     ],
   },
   {
@@ -100,12 +97,11 @@ const INITIAL_ALTERNATIVES: Alternative[] = [
     plannedParkingCount: 380,
     podiumFloors: 0,
     refugeFloors: 0,
-    transferFloors: 1,
     unitSelectionMode: "layout",
     types: [
-      { id: "t3-1", name: "84A", exclArea: 84.9, commArea: 24.5, count: 100, unitsPerFloor: 1.82 },
-      { id: "t3-2", name: "114A", exclArea: 114.8, commArea: 32.2, count: 80, unitsPerFloor: 1.45 },
-      { id: "t3-3", name: "150T", exclArea: 149.5, commArea: 42.1, count: 20, unitsPerFloor: 0.36 },
+      { id: "t3-1", name: "84A", exclArea: 84.9, commArea: 24.5, count: 120, unitsPerFloor: 2 },
+      { id: "t3-2", name: "114A", exclArea: 114.8, commArea: 32.2, count: 60, unitsPerFloor: 1 },
+      { id: "t3-3", name: "150T", exclArea: 149.5, commArea: 42.1, count: 60, unitsPerFloor: 1 },
     ],
   },
 ];
@@ -204,10 +200,14 @@ export default function App() {
     const plannedParkingCount = rawLegalParking > 0 ? Math.ceil(rawLegalParking) : baseAlt.plannedParkingCount;
 
     // 6. 지하층 연면적 (Underground Floor Area) 연동 산정
-    // 주차 1대당 38㎡(차로, 램프, 주차칸), 전기/기계/피트 등 설비 면적 세대당 4.5㎡
-    const undergroundParkingArea = plannedParkingCount * 38;
-    const undergroundUtilityArea = totalUnits * 4.5;
-    const undergroundFloorArea = Math.round((undergroundParkingArea + undergroundUtilityArea) * 100) / 100;
+    // 대지경계 이격 고려 한 층 굴착한계 면적(실사용 대지면적의 80%)을 구하고, 굳이 2개층을 만들 필요 없는 면적이면 1개층, 넘어가면 자동으로 층수 계산되도록 반영
+    const netLotArea = Math.max(0.1, project.lotArea - project.roadArea);
+    const maxUndergroundFloorPlate = netLotArea * 0.8;
+    const requiredUndergroundArea = (plannedParkingCount * 38) + (totalUnits * 4.5);
+    const estimatedUndergroundFloors = maxUndergroundFloorPlate > 0 
+      ? Math.max(1, Math.ceil(requiredUndergroundArea / maxUndergroundFloorPlate)) 
+      : 1;
+    const undergroundFloorArea = Math.round((estimatedUndergroundFloors * maxUndergroundFloorPlate) * 10) / 10;
 
     return {
       aboveGroundFloorArea,
@@ -227,7 +227,7 @@ export default function App() {
 
     const residentialFloors = Math.max(
       0,
-      alt.maxFloors - (alt.podiumFloors || 0) - (alt.refugeFloors || 0) - (alt.transferFloors || 0)
+      alt.maxFloors - (alt.podiumFloors || 0) - (alt.refugeFloors || 0)
     );
     const multiplier = residentialFloors * alt.buildingCount;
 
@@ -313,7 +313,6 @@ export default function App() {
       plannedParkingCount: metrics.plannedParkingCount,
       podiumFloors: currentAlternative.podiumFloors,
       refugeFloors: currentAlternative.refugeFloors,
-      transferFloors: currentAlternative.transferFloors,
       types: JSON.parse(JSON.stringify(types)),
     };
     setAlternatives((prev) => [...prev, newAlt]);
@@ -339,7 +338,6 @@ export default function App() {
       plannedParkingCount: metrics.plannedParkingCount,
       podiumFloors: baseAlt.podiumFloors ?? currentAlternative.podiumFloors,
       refugeFloors: baseAlt.refugeFloors ?? currentAlternative.refugeFloors,
-      transferFloors: baseAlt.transferFloors ?? currentAlternative.transferFloors,
       types: JSON.parse(JSON.stringify(types)),
     };
     setAlternatives((prev) => [...prev, newAlt]);
@@ -383,7 +381,6 @@ export default function App() {
       plannedParkingCount: currentAlternative.plannedParkingCount,
       podiumFloors: currentAlternative.podiumFloors,
       refugeFloors: currentAlternative.refugeFloors,
-      transferFloors: currentAlternative.transferFloors,
       types: JSON.parse(JSON.stringify(currentAlternative.types)), // 깊은 복사
     };
     setAlternatives((prev) => [...prev, newAlt]);
@@ -734,15 +731,6 @@ export default function App() {
                   project={project}
                   alternative={currentAlternative}
                 />
-
-                {/* AI 기반 제약조건 충족 세대 조합 최적화 시뮬레이터 */}
-                <UnitPortfolioOptimizer
-                  project={project}
-                  currentAlternative={currentAlternative}
-                  onApplyOptimalTypes={handleTypesChange}
-                  onAddAlternativeWithTypes={handleAddAlternativeWithTypes}
-                  onShowNotification={triggerToast}
-                />
               </div>
             ) : (
               <div className="animate-fadeIn" id="app-ai_generator-section">
@@ -768,31 +756,22 @@ export default function App() {
                 currentAlternative={currentAlternative}
               />
 
-              {/* 퀵 아키텍트 가이드 노트 */}
-              <div className="bg-white border border-slate-200 rounded p-3 shadow-sm text-[11px] leading-relaxed space-y-1.5 text-slate-600">
-                <p className="font-bold text-slate-900 flex items-center gap-1">
-                  <span className="w-1 h-2.5 bg-blue-700 rounded-full block"></span> 국내 공동주택 주차 조례 안내
-                </p>
-                <p>
-                  지자체 조례는 세대 전용면적의 합에 따라 주차대수를 가산하거나 세대 마지노선 기준(예: 세대당 최소 1.0대 이상 확보, 단 60㎡ 이하는 0.7대)을 정하고 있습니다.
-                </p>
-                <div className="bg-slate-50 p-1.5 rounded text-[10.5px] text-slate-500 font-mono">
-                  ※ 기획설계 시 주거공급량에 적합한 주차 면적을 적정하게 배분하는 용량 분석이 사업성의 핵심 병목입니다.
-                </div>
-              </div>
-
             </div>
           </div>
 
         </div>
 
-        {/* 전체 대안 의사결정 매트릭스 목록 (하단 가로 정형화 표) */}
-        <ComparisonMatrix
-          project={project}
-          alternatives={alternatives}
-          onSelectAlternative={setSelectedAltId}
-          selectedId={selectedAltId}
-        />
+        {/* 전체 대안 의사결정 매트릭스 목록 (하단 가로 정형화 표)
+            grid 외부에 위치시켜 우측 sticky 사이드바의 경계가 grid 내부에서만 끝나도록 완전히 분리합니다.
+            이로써 비교 표와 우측의 sticky 주차조례 카드가 스크롤 시 절대 겹치지 않습니다. */}
+        <div className="w-full mt-4" id="comparison-matrix-wrapper">
+          <ComparisonMatrix
+            project={project}
+            alternatives={alternatives}
+            onSelectAlternative={setSelectedAltId}
+            selectedId={selectedAltId}
+          />
+        </div>
 
       </main>
 

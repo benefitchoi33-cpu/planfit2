@@ -13,15 +13,14 @@ export const FloorAreaTable: React.FC<FloorAreaTableProps> = ({ project, alterna
   const bldgArea = alternative.buildingArea || 0;
   const podiumFloors = alternative.podiumFloors || 0;
   const refugeFloors = alternative.refugeFloors || 0;
-  const transferFloors = alternative.transferFloors || 0;
 
-  // 실사용 대지면적 및 1m 이격 지하 굴착 한계
+  // 실사용 대지면적 및 지하 굴착 한계 (대지면적의 80% 적용)
   const netLotArea = project ? Math.max(0.1, project.lotArea - project.roadArea) : 5000;
-  const maxUndergroundFloorPlate = Math.max(0, Math.sqrt(netLotArea) - 2) ** 2;
+  const maxUndergroundFloorPlate = netLotArea * 0.8; // 실무 관례상 대지 면적의 약 80% 수준으로 지하 굴착 평균 한 층 면적 설정
   const roundedMaxUndergroundFloorPlate = Math.round(maxUndergroundFloorPlate * 10) / 10;
 
   // 주거 가능층수 계산
-  const residentialFloors = Math.max(0, maxFloors - podiumFloors - refugeFloors - transferFloors);
+  const residentialFloors = Math.max(0, maxFloors - podiumFloors - refugeFloors);
 
   // 주거 전용+공용 연면적 (지상 주동 연면적)
   const types = alternative.types || [];
@@ -51,7 +50,7 @@ export const FloorAreaTable: React.FC<FloorAreaTableProps> = ({ project, alterna
     const layerFloorArea = singleFloorM2PerBldg * bldgCount;
     floorLayers.push({
       name: `지상 주거 기준층`,
-      range: `${podiumFloors + transferFloors + refugeFloors + 1}F ~ ${maxFloors}F`,
+      range: `${podiumFloors + refugeFloors + 1}F ~ ${maxFloors}F`,
       floors: residentialFloors,
       areaPerFloor: layerFloorArea,
       totalArea: layerSumArea,
@@ -81,24 +80,6 @@ export const FloorAreaTable: React.FC<FloorAreaTableProps> = ({ project, alterna
       color: "bg-amber-50/70 border-amber-200 text-amber-900",
       badgeColor: "bg-amber-100 text-amber-800",
       icon: <Disc className="w-3.5 h-3.5 text-amber-650" />
-    });
-  }
-
-  // 3. 구조전환층 (트랜스퍼)
-  if (transferFloors > 0) {
-    const layerFloorArea = avgFootprintPerBldg * bldgCount; // 주동 필로티 수준 공간
-    const layerSumArea = layerFloorArea * transferFloors;
-    floorLayers.push({
-      name: "트랜스퍼 거더층 (구조전환)",
-      range: `${podiumFloors + 1}F`,
-      floors: transferFloors,
-      areaPerFloor: layerFloorArea,
-      totalArea: layerSumArea,
-      usage: "전이 보(Transfer Plate) 공학설비층",
-      status: "🛡️ 전이슬래브 하중설계 필",
-      color: "bg-yellow-50/70 border-yellow-250 text-yellow-950",
-      badgeColor: "bg-yellow-100 text-yellow-800",
-      icon: <Layers className="w-3.5 h-3.5 text-yellow-650" />
     });
   }
 
@@ -133,8 +114,8 @@ export const FloorAreaTable: React.FC<FloorAreaTableProps> = ({ project, alterna
       totalArea: undergroundFloorArea,
       usage: "계획 주차장, 발전/기계실 및 정화조 시설",
       status: isUndergroundPlateOver 
-        ? `⚠️ 대지경계 초과 (한도: ${Math.round(maxUndergroundFloorPlate).toLocaleString()}㎡)` 
-        : `🟢 대지경계 1m 이격적합`,
+        ? `⚠️ 굴착한도 초과 (한도: ${Math.round(maxUndergroundFloorPlate).toLocaleString()}㎡)` 
+        : `🟢 지하 굴착영역 적합`,
       color: isUndergroundPlateOver 
         ? "bg-red-50 text-red-950 font-semibold" 
         : "bg-slate-50 border-slate-200 text-slate-800",
@@ -159,7 +140,7 @@ export const FloorAreaTable: React.FC<FloorAreaTableProps> = ({ project, alterna
       </div>
 
       <p className="text-[10px] text-slate-500 leading-normal">
-        선택된 대안의 계획동수({bldgCount}동), 최고층고({maxFloors}층) 및 특수 보정층(포디움, 주저트랜스퍼, 피난층) 조건에 매칭하는 가상 단면 평면 분석 결과입니다.
+        선택된 대안의 계획동수({bldgCount}동), 최고층고({maxFloors}층) 및 특수 보정층(포디움, 피난층) 조건에 매칭하는 가상 단면 평면 분석 결과입니다.
       </p>
 
       <div className="overflow-x-auto">
@@ -232,7 +213,7 @@ export const FloorAreaTable: React.FC<FloorAreaTableProps> = ({ project, alterna
                 </span>
               </td>
               <td className="py-2.5 px-3 text-left text-slate-300 font-sans text-[10px] border-l border-slate-700" colSpan={2}>
-                📐 지상 연면적 {Math.round(residentialAboveArea).toLocaleString()}㎡ + 지하 {Math.round(undergroundFloorArea).toLocaleString()}㎡ 등 전체 전이 구역 반영 완료
+                📐 지상 연면적 {Math.round(residentialAboveArea).toLocaleString()}㎡ + 지하 {Math.round(undergroundFloorArea).toLocaleString()}㎡ 등 전체 계획 구역 반영 완료
               </td>
             </tr>
           </tbody>
@@ -251,22 +232,6 @@ export const FloorAreaTable: React.FC<FloorAreaTableProps> = ({ project, alterna
                 <span className="text-emerald-700 font-bold ml-1">현재 동수 및 최고층고는 주차 및 세대 배치를 완전히 포괄하는 넉넉한 공간을 제공합니다.</span>
               ) : (
                 <span className="text-red-650 font-bold ml-1">현재 층수가 부족하여 주동 바닥에 무리가 갈 수 있으니 최고층수를 상향하거나, 타 세대 타입의 층당 호조합 배정을 수정해 주십시오.</span>
-              )}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-1 border-t border-slate-150 pt-1.5">
-          <Info className="w-3.5 h-3.5 text-slate-500 shrink-0 mt-0.5" />
-          <div>
-            <span className="font-bold text-slate-800">지하 대지경계선 1m 이격 굴착 정합성 안내: </span>
-            <span>
-              실사용 대지면적(<strong>{Math.round(netLotArea).toLocaleString()}㎡</strong>)에서 법정 사방 1m를 흙막이 가설 공정용으로 이격해 산출한 정방 대지 기준 최고 굴착 영역 면적은 단일 전개면당 <strong>{roundedMaxUndergroundFloorPlate.toLocaleString()}㎡</strong>입니다. 
-              현재 요구 주동 설비 및 주차수용을 위한 지하 1개층당 필요 면적은 <strong>{Math.round(estimatedUndergroundAreaPerFloor).toLocaleString()}㎡</strong>이며, 해당 면적은{" "}
-              {estimatedUndergroundAreaPerFloor <= maxUndergroundFloorPlate ? (
-                <span className="text-emerald-700 font-bold">허용 이격 영역 내에서 무리 없이 시공 및 굴착 기획이 가능합니다.</span>
-              ) : (
-                <span className="text-red-650 font-bold">규제 이격한계를 초과했습니다. 공법상 흙막이 외벽 밀림 위험이 있으므로 지하층수({estimatedUndergroundFloors}F)를 증설해 단층 필요 바닥을 하향하는 것이 안전합니다.</span>
               )}
             </span>
           </div>

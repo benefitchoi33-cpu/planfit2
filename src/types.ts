@@ -42,7 +42,6 @@ export interface Alternative {
   // 구조 및 특수층 계획 (추가)
   podiumFloors?: number;               // 지상 포디움(Podium) 층수
   refugeFloors?: number;               // 피난안전구역/피난층 수
-  transferFloors?: number;             // 트랜스퍼 층 (구조전환층) 수
 
   // 타입별 세대 구성
   types: TypeConfig[];

@@ -142,8 +142,8 @@ app.post("/api/gemini/generate-alternative", async (req, res) => {
 1. 'buildingCount'(동수)는 3~6동 범위로 설계해 조화롭게 배치하세요.
 2. 'maxFloors'(최고층수)는 10~30층 범위로 하세요.
 3. 'buildingArea'는 최대 계획건축면적(${maxBcrPlanArea}㎡) 이하로 규제를 초과하지 않도록 70%~95% 선에서 대입하세요.
-4. 'podiumFloors', 'refugeFloors', 'transferFloors' 등은 타겟 구성을 바탕으로 0 또는 1로 적절히 설계하세요. (기본값 설정 권장)
-5. 'types' 배열에는 세대 구성을 지정하세요. 각 타입 아이템은 name(예: "59A", "84A", "114A"), exclArea(전용면적, 대표 59.9, 84.9, 114.8 등), commArea(공용면적, 각각 18㎡, 24㎡, 32㎡ 수준), count(배정세대수), unitsPerFloor(층당호조합개수, 예: 1.0, 1.5, 2.0 등)를 대입하십시오.
+4. 'podiumFloors', 'refugeFloors' 등은 타겟 구성을 바탕으로 0 또는 1로 적절히 설계하세요. (기본값 설정 권장)
+5. 'types' 배열에는 세대 구성을 지정하세요. 각 타입 아이템은 name(예: "59A", "84A", "114A"), exclArea(전용면적, 대표 59.9, 84.9, 114.8 등), commArea(공용면적, 각각 18㎡, 24㎡, 32㎡ 수준), count(배정세대수), unitsPerFloor(동별 층당 호수, 소수점 절대 금지 및 무조건 1, 2, 3, 4 등의 정수 형태로 입력)를 대입하십시오.
 6. 전체 주동의 연면적총합(types의 (exclArea+commArea)*count 합산)은 용적률 상한 연면적(${maxFarPlanArea}㎡) 이하를 정밀 준수하면서도 85%~98% 성능을 확보해야 합니다.
 7. 'aiRationale' 란에는 이 대안을 설계한 동기와 핵심 설계 의사 결정(예: '주차 조례 완벽 충족 및 84㎡ 중심의 조화형 단지 배치안')을 고급스럽고 읽기 좋은 한글로 요약하여 출력해 주세요.`;
 
@@ -162,7 +162,6 @@ app.post("/api/gemini/generate-alternative", async (req, res) => {
             buildingArea: { type: Type.NUMBER, description: "계획 건축면적 (㎡)" },
             podiumFloors: { type: Type.INTEGER, description: "지상 포디움 층수 (0 또는 1)" },
             refugeFloors: { type: Type.INTEGER, description: "지상 피난 층수 (0 또는 1)" },
-            transferFloors: { type: Type.INTEGER, description: "트랜스퍼 층수 (0 또는 1)" },
             unitSelectionMode: { type: Type.STRING, description: "항상 'layout' 입력" },
             types: {
               type: Type.ARRAY,
@@ -173,7 +172,7 @@ app.post("/api/gemini/generate-alternative", async (req, res) => {
                   exclArea: { type: Type.NUMBER, description: "전용면적 (㎡)" },
                   commArea: { type: Type.NUMBER, description: "주거공용면적 (㎡)" },
                   count: { type: Type.INTEGER, description: "배정할 세대수" },
-                  unitsPerFloor: { type: Type.NUMBER, description: "층당 호 조합 개수 (예: 1.5, 2.0)" }
+                  unitsPerFloor: { type: Type.INTEGER, description: "동별 층당 호수 (소수점 절대 불가, 1, 2, 3 등의 정수만 가능)" }
                 },
                 required: ["name", "exclArea", "commArea", "count", "unitsPerFloor"]
               }
